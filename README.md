@@ -4,7 +4,7 @@ A browser-based classroom demo for looking up IIT Madras cycle stickers and brow
 
 ## Try the sticker
 
-Open the HTTPS site on a phone, select **Open camera**, allow camera access, and point it at the printed cycle code. The supplied sticker reads **HTL 26 0001**. The first scan loads the recognition engine; keep the code well lit and steady. If the camera is unavailable or the code is hard to read, choose a photo or type the code instead. The supplied `demo-sticker.webp` can be printed or displayed on another screen.
+Open the HTTPS site on a phone, select **Open camera**, allow camera access, and point it at the printed cycle code. The supplied stickers read **HTL 26 0001**, **HTL 26 0002**, **HTL 26 0003**, and **HTL 26 0004**, each mapped to a different illustrative cycle. The first scan loads the recognition engine; keep the code well lit and steady. If the camera is unavailable or the code is hard to read, choose a photo or type the code instead. The supplied `demo-sticker.webp` can be printed or displayed on another screen.
 
 Recognition and lookup run on each visitor's device. There is no backend and no image upload to a server. A connection is needed to load the site and recognition assets; the browser may cache them afterwards.
 
