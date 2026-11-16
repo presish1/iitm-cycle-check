@@ -10,7 +10,7 @@ Recognition and lookup run on each visitor's device. There is no backend and no 
 
 ## Data
 
-`data.js` contains six **fictional classroom records**, including fictional roll numbers, frame IDs and auction listings. The sample sticker is mapped to one of those fictional records. These are not campus records and must be replaced with verified data before use beyond a demo. Unknown IDs are not assigned invented details.
+`data.js` contains six **fictional classroom records**, including fictional roll numbers, frame IDs and auction listings. The sample sticker is mapped to one of those fictional records. These are not campus records and must be replaced with verified data before use beyond a demo. Unknown IDs are shown in the entry field without invented details. Recognition supports IDs in the HTL XX XXXX format and tries multiple contrast and tilt treatments; keep the sticker level and well lit for the best result.
 
 ## Run locally
 

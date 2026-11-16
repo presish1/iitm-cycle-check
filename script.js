@@ -6,7 +6,7 @@ const camera = document.querySelector('#camera');
 const hint = document.querySelector('#cameraHint');
 const status = document.querySelector('#scanStatus');
 const scanButton = document.querySelector('#scanButton');
-let stream, scanning = false, lastFocus, workerPromise, generation = 0;
+let stream, scanning = false, starting = false, lastFocus, workerPromise, generation = 0;
 
 function normalizeId(value) {
   const text = String(value).toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -17,16 +17,16 @@ function normalizeId(value) {
 }
 function findRecord(id) { return records.find(record => normalizeId(record.id) === normalizeId(id)); }
 function stopCamera() {
-  generation++; scanning = false;
+  generation++; scanning = false; starting = false;
   stream?.getTracks().forEach(track => track.stop());
   stream = null; video.srcObject = null; camera.classList.remove('active');
   scanButton.querySelector('span').textContent = 'Open camera';
 }
 function showRecord(value) {
   const id = normalizeId(value);
-  if (!id) { status.textContent = 'Enter a code like HTL 26 0001.'; return false; }
+  if (!id) { status.textContent = 'Enter a code like HTL 00 0000.'; return false; }
   const record = findRecord(id);
-  if (!record) { status.textContent = `No cycle found for ${id}. Check the code and try again.`; return false; }
+  if (!record) { status.textContent = `Code read: ${id}. No matching cycle record.`; return false; }
   stopCamera(); status.textContent = ''; lastFocus = document.activeElement;
   document.querySelector('#resultId').textContent = record.id;
   document.querySelector('#resultFrame').textContent = record.frameId || '—';
@@ -53,25 +53,51 @@ function getWorker() {
   }
   return workerPromise;
 }
-function prepImage(source, width, height) {
+function prepImage(source, width, height, angle = 0, threshold = 105) {
   const scale = Math.min(1, 1500 / Math.max(width, height));
   canvas.width = Math.round(width * scale); canvas.height = Math.round(height * scale);
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(angle * Math.PI / 180);
+  ctx.drawImage(source, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+  ctx.resetTransform();
   const raw = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  // The sticker has light lettering on a dark background. Binarise and invert it.
+  if (threshold === 'adaptive') {
+    const hist = new Uint32Array(256); let total = 0, sum = 0;
+    for (let i = 0; i < raw.data.length; i += 4) { const v = Math.round(raw.data[i] * .299 + raw.data[i+1] * .587 + raw.data[i+2] * .114); hist[v]++; sum += v; total++; }
+    let background = 0, backgroundSum = 0, best = 0, cutoff = 105;
+    for (let i = 0; i < 256; i++) { background += hist[i]; if (!background || background === total) continue; backgroundSum += i * hist[i]; const diff = backgroundSum / background - (sum - backgroundSum) / (total - background); const score = background * (total - background) * diff * diff; if (score > best) { best = score; cutoff = i; } }
+    threshold = cutoff;
+  }
+  // Light lettering on a dark sticker becomes dark text on white for OCR.
   for (let i = 0; i < raw.data.length; i += 4) {
     const brightness = raw.data[i] * .299 + raw.data[i+1] * .587 + raw.data[i+2] * .114;
-    const value = brightness > 105 ? 0 : 255;
+    const value = brightness > threshold ? 0 : 255;
     raw.data[i] = raw.data[i+1] = raw.data[i+2] = value;
   }
   ctx.putImageData(raw, 0, 0);
   return canvas;
 }
 async function readImage(source, width, height) {
+  // Freeze a video frame so every recognition pass examines the same image.
+  const snapshot = document.createElement('canvas');
+  const scale = Math.min(1, 1500 / Math.max(width, height));
+  snapshot.width = Math.round(width * scale); snapshot.height = Math.round(height * scale);
+  snapshot.getContext('2d').drawImage(source, 0, 0, snapshot.width, snapshot.height);
   const worker = await getWorker();
-  const { data } = await worker.recognize(prepImage(source, width, height));
-  return normalizeId(data.text);
+  for (const [angle, threshold] of [[0, 105], [0, 'adaptive'], [7, 105], [-7, 105]]) {
+    const { data } = await worker.recognize(prepImage(snapshot, snapshot.width, snapshot.height, angle, threshold));
+    const id = normalizeId(data.text);
+    if (id) return id;
+  }
+  return null;
+}
+function handleDetected(id) {
+  if (showRecord(id)) return true;
+  stopCamera();
+  document.querySelector('#cycleId').value = id;
+  return false;
 }
 async function scanFrame(current) {
   if (!scanning || current !== generation) return;
@@ -84,18 +110,22 @@ async function scanFrame(current) {
       const code = jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' });
       const id = normalizeId(code?.data || '') || await readImage(video, video.videoWidth, video.videoHeight);
       if (!scanning || current !== generation) return;
-      if (id) { if (showRecord(id)) return; hint.textContent = 'Code found. Check the message below.'; }
+      if (id) { handleDetected(id); return; }
     }
   } catch (_) { if (current === generation) status.textContent = 'Could not read the code. Try a photo or enter it below.'; }
   if (scanning && current === generation) setTimeout(() => scanFrame(current), 600);
 }
 scanButton.addEventListener('click', async () => {
-  if (scanning) { stopCamera(); hint.textContent = 'Place the cycle code inside the frame'; status.textContent = ''; return; }
+  if (scanning || starting) { stopCamera(); hint.textContent = 'Place the cycle code inside the frame'; status.textContent = ''; return; }
   if (!navigator.mediaDevices?.getUserMedia) { status.textContent = 'Camera unavailable. Choose a photo or enter the code.'; return; }
   try {
-    status.textContent = 'Preparing scanner…';
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-    video.srcObject = stream; await video.play(); scanning = true; const current = ++generation; camera.classList.add('active');
+    status.textContent = 'Preparing scanner…'; starting = true; const current = ++generation;
+    scanButton.querySelector('span').textContent = 'Close camera';
+    const nextStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    if (current !== generation) { nextStream.getTracks().forEach(track => track.stop()); return; }
+    stream = nextStream; video.srcObject = stream; await video.play();
+    if (current !== generation) return;
+    starting = false; scanning = true; camera.classList.add('active');
     hint.textContent = 'Hold the code steady and in focus'; scanButton.querySelector('span').textContent = 'Close camera';
     await getWorker(); if (!scanning || current !== generation) return;
     status.textContent = 'Looking for a cycle code…'; scanFrame(current);
@@ -106,7 +136,7 @@ document.querySelector('#imageInput').addEventListener('change', async event => 
   stopCamera(); status.textContent = 'Reading photo…';
   try {
     const url = URL.createObjectURL(file); const img = new Image();
-    try { img.src = url; await img.decode(); const id = await readImage(img, img.naturalWidth, img.naturalHeight); if (id) showRecord(id); else status.textContent = 'Could not read the code. Try a clearer photo or enter it below.'; }
+    try { img.src = url; await img.decode(); const id = await readImage(img, img.naturalWidth, img.naturalHeight); if (id) handleDetected(id); else status.textContent = 'Could not read the code. Try a clearer photo or enter it below.'; }
     finally { URL.revokeObjectURL(url); }
   } catch (_) { status.textContent = 'Could not read the photo. Enter the code below.'; }
   event.target.value = '';

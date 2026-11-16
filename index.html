@@ -23,12 +23,12 @@
         <div class="camera" id="camera">
           <video id="video" playsinline muted></video><canvas id="canvas" hidden></canvas>
           <div class="camera-grid" aria-hidden="true"></div>
-          <div class="viewfinder" aria-hidden="true"><i></i><i></i><i></i><i></i><span class="scanner-example">HTL 26 0001</span></div>
+          <div class="viewfinder" aria-hidden="true"><i></i><i></i><i></i><i></i><span class="scanner-example">HTL 00 0000</span></div>
           <span class="camera-hint" id="cameraHint">Place the cycle code inside the frame</span>
         </div>
         <button class="primary" id="scanButton"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 4H5a1 1 0 0 0-1 1v3m12-4h3a1 1 0 0 1 1 1v3M4 16v3a1 1 0 0 0 1 1h3m12-4v3a1 1 0 0 1-1 1h-3M8 12h8"/></svg><span>Open camera</span></button>
         <div class="upload-row"><label for="imageInput"><svg viewBox="0 0 24 24" fill="none"><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3M12 16V4m-4 4 4-4 4 4"/></svg>Choose a photo</label><input id="imageInput" type="file" accept="image/*" hidden></div><p class="scan-status" id="scanStatus" role="status" aria-live="polite"></p><div class="divider"><span>OR ENTER THE CODE</span></div>
-        <form id="manualForm"><label for="cycleId">Cycle ID</label><div class="input-row"><input id="cycleId" placeholder="HTL 26 0001" autocomplete="off" required><button type="submit">Look up <span aria-hidden="true">→</span></button></div></form>
+        <form id="manualForm"><label for="cycleId">Cycle ID</label><div class="input-row"><input id="cycleId" placeholder="HTL 00 0000" autocomplete="off" required><button type="submit">Look up <span aria-hidden="true">→</span></button></div></form>
       </div>
     </section>
     <section id="auctionPage" class="page" hidden>
