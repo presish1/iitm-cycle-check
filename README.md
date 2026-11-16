@@ -19,3 +19,20 @@ Serve this directory over HTTP, for example `python3 -m http.server 8000`, and v
 ## Third-party components
 
 Tesseract.js 5.1.1, Tesseract.js Core 5.1.1 and English fast training data are used for on-device text recognition. jsQR 1.4.0 also supports machine-readable codes. The library licenses are in `vendor/`. The supplied sticker was used to create the demo asset and institute emblem shown in this prototype.
+
+## Scanner messages
+
+The camera checks the same printed code twice before opening a record. Scans try additional contrast and modest tilt corrections when the first pass fails. Extreme blur, glare, small text, steep angles and camera motion can still prevent a reliable read. Move closer and hold steady; photo upload and manual entry remain available.
+
+- `CAM-01`: camera permission denied; enable it in browser settings.
+- `CAM-02`: no camera found.
+- `CAM-03`: camera is busy or unavailable to the browser.
+- `CAM-04`: camera could not start.
+- `CAM-05`: camera API is unavailable; use the HTTPS site or a photo.
+- `CAM-06`: camera stopped unexpectedly.
+- `OCR-01`: the recognition engine failed to load; check the connection.
+- `IMG-01`: the selected image could not be opened.
+- `SCAN-01`: the code was not clear enough to read.
+- `SCAN-02`: recognition stopped unexpectedly.
+- `CODE-01`: the entered code is not in the expected format.
+- `DATA-01`: the recognised code does not have a local record.
